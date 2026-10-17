@@ -2,7 +2,7 @@
 
 Documents that name a person in [Discovery](https://discovery.nationalarchives.gov.uk), the catalogue
 of the UK's National Archives and of some 2,500 archives across the country, for
-[glitchr/omnistate](https://github.com/glitchr-studio/omnistate).
+[omniscient/omnistate](https://github.com/glitchr-studio/omnistate).
 
 **A catalogue of archives, not civil registration.** England and Wales' births, marriages and deaths
 are held by the General Register Office, which has no public API. What Discovery answers to a name is
@@ -17,7 +17,7 @@ $papers[0]->archive;    // Devon Archives and Local Studies Service, 3483 A/PO 2
 $papers[0]->url;        // its page in Discovery
 ```
 
-No framework needed: the package requires `glitchr/omnistate` and `symfony/http-client`.
+No framework needed: the package requires `omniscient/omnistate` and `symfony/http-client`.
 `$httpClient` is the HTTP client to call with - the application's, `HttpClient::create()` in
 plain PHP, a `MockHttpClient` in a test.
 
