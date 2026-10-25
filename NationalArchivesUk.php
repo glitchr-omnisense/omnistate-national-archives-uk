@@ -103,7 +103,12 @@ final class NationalArchivesUk implements CivilRegistryInterface
             $response = $this->http->request('GET', rtrim($this->url, '/').$path, ['query' => $query, 'headers' => ['Accept' => 'application/json'], 'timeout' => $this->timeout]);
             $status = $response->getStatusCode();
             if (429 === $status || $status >= 500) {
-                throw new UnavailableException(sprintf('Discovery answered %d.', $status), 429 === $status ? 60 : null);
+                $retry = $response->getHeaders(false)['retry-after'][0] ?? null;
+
+                throw new UnavailableException(sprintf('Discovery answered %d.', $status), 429 === $status ? (is_numeric($retry) ? max(1, (int) $retry) : 60) : null);
+            }
+            if (401 === $status || 403 === $status) {
+                throw new UnavailableException(sprintf('Discovery refused the call (%d).', $status));
             }
             if ($find && \in_array($status, [204, 404], true)) {
                 return null;
