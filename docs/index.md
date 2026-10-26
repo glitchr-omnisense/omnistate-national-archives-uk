@@ -2,7 +2,7 @@
 
 Documents that name a person in [Discovery](https://discovery.nationalarchives.gov.uk), the
 catalogue of the UK's National Archives and of some 2,500 archives across the country, for
-[omniscient/omnistate](https://github.com/glitchr-studio/omnistate): wills, service records,
+[omnisense/omnistate](https://github.com/glitchr-omnisense/omnistate): wills, service records,
 prisoner-of-war cards, settlement examinations, parish papers, described piece by piece.
 
 > [!IMPORTANT]
@@ -22,10 +22,10 @@ is `NationalArchivesUk::PAGE` + its id (`https://discovery.nationalarchives.gov.
 ## Installation
 
 ```sh
-composer require omniscient/omnistate omnistate/national-archives-uk
+composer require omnisense/omnistate omnistate/national-archives-uk
 ```
 
-Requires PHP 8.2, `omniscient/omnistate` (1.x) and `symfony/http-client` (6.4, 7 or 8). In a
+Requires PHP 8.2, `omnisense/omnistate` (1.x) and `symfony/http-client` (6.4, 7 or 8). In a
 Symfony application, `OmnistateBundle` registers it when it is installed (tag
 `omnistate.civil_registry`); nothing to configure.
 
