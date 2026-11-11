@@ -91,7 +91,12 @@ final class NationalArchivesUk implements CivilRegistryInterface, DeclaresUsageP
             'sps.page' => $query->page > 1 ? $query->page - 1 : null,
         ], static fn (mixed $value) => null !== $value && '' !== $value));
 
-        return array_map(fn (array $record) => $this->record($record), $answer['records'] ?? []);
+        $records = $answer['records'] ?? [];
+        if (!\is_array($records)) {
+            throw self::malformed();
+        }
+
+        return array_map(fn (mixed $record) => $this->record(\is_array($record) ? $record : throw self::malformed()), $records);
     }
 
     public function find(string $identifier): ?CivilRecord
@@ -126,10 +131,12 @@ final class NationalArchivesUk implements CivilRegistryInterface, DeclaresUsageP
             }
             $body = $response->getContent(false);
 
-            return '' === trim($body) ? ($find ? null : []) : json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
+            $answer = '' === trim($body) ? ($find ? null : []) : json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
         } catch (ExceptionInterface|\JsonException $e) {
             throw new UnavailableException('Discovery did not answer: '.$e->getMessage(), null, $e);
         }
+
+        return null === $answer || \is_array($answer) ? $answer : throw self::malformed();
     }
 
     /**
@@ -157,7 +164,7 @@ final class NationalArchivesUk implements CivilRegistryInterface, DeclaresUsageP
             kind: CivilRecordKind::OTHER,
             source: $this->name(),
             date: $date,
-            archive: new Archive((string) ($holder ?? 'The National Archives'), null, ($record['reference'] ?? $record['citableReference'] ?? null) ?: null, self::PAGE.$record['id']),
+            archive: new Archive((string) ($holder ?? 'The National Archives'), null, self::string($record['reference'] ?? $record['citableReference'] ?? null) ?: null, self::PAGE.$record['id']),
             url: self::PAGE.$record['id'],
             title: $title ?: null,
             description: implode(' — ', array_filter([$record['context'] ?? null, $scope !== $title ? $scope : null, ($record['coveringDates'] ?? null) ?: null])) ?: null,
@@ -183,5 +190,26 @@ final class NationalArchivesUk implements CivilRegistryInterface, DeclaresUsageP
     private static function date(mixed $number): ?PartialDate
     {
         return is_numeric($number) && $number > 0 ? PartialDate::parse(sprintf('%08d', $number)) : null;
+    }
+
+    /**
+     * A value handed to a ?string parameter, as PHP coerced it: a scalar as
+     * its string, null kept; an array where a text belongs is an answer of
+     * another shape.
+     */
+    private static function string(mixed $value): ?string
+    {
+        return match (true) {
+            null === $value, \is_string($value) => $value,
+            \is_int($value), \is_float($value) => (string) $value,
+            \is_bool($value) => $value ? '1' : '',
+            default => throw self::malformed(),
+        };
+    }
+
+    /** The family's rule on a body that is not what it should be (docs/providers.md). */
+    private static function malformed(): UnavailableException
+    {
+        return new UnavailableException('Discovery answered in another shape than its API\'s.');
     }
 }

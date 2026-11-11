@@ -94,6 +94,26 @@ final class NationalArchivesUkTest extends TestCase
         self::assertSame([], $discovery->search(new CivilQuery(familyName: 'zzzzqqqxxnobody')));
     }
 
+    public function testAnAnswerOfAnotherShapeIsUnavailable(): void
+    {
+        foreach ([
+            ['search', '{"records":"none"}'],
+            ['search', '{"records":["none"]}'],
+            ['search', '"none"'],
+            ['search', '{"records":[{"id":"C1","reference":["WO 1"]}]}'],
+            ['find', '"none"'],
+            ['find', '{"id":"C1","reference":["WO 1"]}'],
+        ] as [$call, $body]) {
+            $discovery = new NationalArchivesUk(new MockHttpClient(new MockResponse($body)));
+            try {
+                'search' === $call ? $discovery->search(new CivilQuery(familyName: 'Darwin')) : $discovery->find('C1');
+                self::fail($call.' unavailable: '.$body);
+            } catch (UnavailableException $e) {
+                self::assertSame('Discovery answered in another shape than its API\'s.', $e->getMessage());
+            }
+        }
+    }
+
     public function testDownIsNotNobody(): void
     {
         $this->expectException(UnavailableException::class);
