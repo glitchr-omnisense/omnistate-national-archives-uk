@@ -27,12 +27,12 @@ final class NationalArchivesUkContractTest extends TestCase
         }), ['response_headers' => ['content-type' => 'application/json']])];
     }
 
-    protected function civilQuery(): ?CivilQuery
+    protected function civilQuery(): CivilQuery
     {
         return new CivilQuery(familyName: 'Smith', givenName: 'John');
     }
 
-    protected function civilIdentifier(): ?string
+    protected function civilIdentifier(): string
     {
         return '28d83883-ca69-45e3-bbdc-c25fb2da0f1b';
     }

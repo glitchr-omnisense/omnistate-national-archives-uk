@@ -35,7 +35,7 @@ final class NationalArchivesUkTest extends TestCase
         $discovery = new NationalArchivesUk(new MockHttpClient(function (string $method, string $url) use (&$asked) {
             $asked = urldecode($url);
 
-            return new MockResponse(file_get_contents(__DIR__.'/Fixtures/search.json'));
+            return new MockResponse((string) file_get_contents(__DIR__.'/Fixtures/search.json'));
         }));
         $records = $discovery->search(new CivilQuery(familyName: 'Smith', givenName: 'John', dated: Period::years(1770, 1780), limit: 3, page: 2));
 
@@ -47,8 +47,9 @@ final class NationalArchivesUkTest extends TestCase
         self::assertSame(CivilRecordKind::OTHER, $paper->kind);
         self::assertSame('John Smith, parish of birth Shute', $paper->title);
         self::assertSame('1774', (string) $paper->date);
-        self::assertSame('Devon Archives and Local Studies Service (South West Heritage Trust)', $paper->archive?->name);
-        self::assertSame('3483 A/PO 20/8', $paper->archive?->reference);
+        self::assertNotNull($paper->archive);
+        self::assertSame('Devon Archives and Local Studies Service (South West Heritage Trust)', $paper->archive->name);
+        self::assertSame('3483 A/PO 20/8', $paper->archive->reference);
         self::assertSame('https://discovery.nationalarchives.gov.uk/details/r/28d83883-ca69-45e3-bbdc-c25fb2da0f1b', $paper->url);
         self::assertSame([], $paper->persons, 'the person is in the title, not in a field');
         self::assertStringContainsString('Settlement Examinations', (string) $paper->description);
@@ -57,25 +58,29 @@ final class NationalArchivesUkTest extends TestCase
         self::assertSame('C17678834', $card->identifier);
         self::assertNull($card->date, 'a span is not a date');
         self::assertSame('1939/1945', (string) $card->period);
-        self::assertSame('The National Archives, Kew', $card->archive?->name);
-        self::assertSame('WO 416/335/41', $card->archive?->reference);
+        self::assertNotNull($card->archive);
+        self::assertSame('The National Archives, Kew', $card->archive->name);
+        self::assertSame('WO 416/335/41', $card->archive->reference);
     }
 
     public function testTheDetailsOfARecord(): void
     {
         $discovery = new NationalArchivesUk(new MockHttpClient([
-            new MockResponse(file_get_contents(__DIR__.'/Fixtures/details.json')),
-            new MockResponse(file_get_contents(__DIR__.'/Fixtures/details-kew.json')),
+            new MockResponse((string) file_get_contents(__DIR__.'/Fixtures/details.json')),
+            new MockResponse((string) file_get_contents(__DIR__.'/Fixtures/details-kew.json')),
         ]));
 
         $paper = $discovery->find('28d83883-ca69-45e3-bbdc-c25fb2da0f1b');
-        self::assertSame('John Smith, parish of birth Shute', $paper?->title);
-        self::assertSame('3483 A/PO 20/8', $paper->archive?->reference);
-        self::assertSame('Devon Archives and Local Studies Service (South West Heritage Trust)', $paper->archive?->name);
+        self::assertNotNull($paper);
+        self::assertSame('John Smith, parish of birth Shute', $paper->title);
+        self::assertNotNull($paper->archive);
+        self::assertSame('3483 A/PO 20/8', $paper->archive->reference);
+        self::assertSame('Devon Archives and Local Studies Service (South West Heritage Trust)', $paper->archive->name);
         self::assertSame('1774', (string) $paper->date);
 
         $card = $discovery->find('C17678834');
-        self::assertSame('Name: John Smith. Date of Birth: [unspecified].', $card?->title, 'no title of its own: its description, without the markup');
+        self::assertNotNull($card);
+        self::assertSame('Name: John Smith. Date of Birth: [unspecified].', $card->title, 'no title of its own: its description, without the markup');
         self::assertSame('WO 416/335/41', $card->archive?->reference);
     }
 

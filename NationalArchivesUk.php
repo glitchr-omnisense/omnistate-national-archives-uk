@@ -96,7 +96,7 @@ final class NationalArchivesUk implements CivilRegistryInterface, DeclaresUsageP
             throw self::malformed();
         }
 
-        return array_map(fn (mixed $record) => $this->record(\is_array($record) ? $record : throw self::malformed()), $records);
+        return array_values(array_map(fn (mixed $record) => $this->record(\is_array($record) ? $record : throw self::malformed()), $records));
     }
 
     public function find(string $identifier): ?CivilRecord
@@ -109,7 +109,11 @@ final class NationalArchivesUk implements CivilRegistryInterface, DeclaresUsageP
         return null === $answer || !isset($answer['id']) ? null : $this->record($answer);
     }
 
-    /** @return array<string, mixed>|null null: no such record (find only) */
+    /**
+     * @param array<string, mixed> $query
+     *
+     * @return array<mixed>|null null: no such record (find only)
+     */
     private function ask(string $path, array $query, bool $find = false): ?array
     {
         try {
@@ -143,31 +147,32 @@ final class NationalArchivesUk implements CivilRegistryInterface, DeclaresUsageP
      * A line of a search or the details of a record: the two do not name
      * their fields alike.
      *
-     * @param array<string, mixed> $record
+     * @param array<mixed> $record
      */
     private function record(array $record): CivilRecord
     {
-        $scope = $record['scopeContent']['description'] ?? $record['description'] ?? null;
-        $scope = \is_string($scope) ? trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($scope)))) : null;
-        $title = trim((string) ($record['title'] ?? '')) ?: $scope;
+        $id = self::cast($record['id'] ?? null);
+        $scope = self::at($record, 'scopeContent', 'description') ?? $record['description'] ?? null;
+        $scope = \is_string($scope) ? trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($scope))) ?? '') : null;
+        $title = trim(self::cast($record['title'] ?? '')) ?: $scope;
 
         $from = self::date($record['numStartDate'] ?? $record['coveringFromDate'] ?? null);
         $to = self::date($record['numEndDate'] ?? $record['coveringToDate'] ?? null);
         // a document of one year is dated by it; a span stays a span
         $date = null !== $from && $from->year === $to?->year ? ((string) $from === (string) $to ? $from : new PartialDate($from->year)) : null;
 
-        $holder = $record['heldBy'][0] ?? null;
+        $holder = self::at($record, 'heldBy', 0);
         $holder = \is_array($holder) ? ($holder['xReferenceName'] ?? null) : $holder;
 
         return new CivilRecord(
-            identifier: (string) $record['id'],
+            identifier: $id,
             kind: CivilRecordKind::OTHER,
             source: $this->name(),
             date: $date,
-            archive: new Archive((string) ($holder ?? 'The National Archives'), null, self::string($record['reference'] ?? $record['citableReference'] ?? null) ?: null, self::PAGE.$record['id']),
-            url: self::PAGE.$record['id'],
+            archive: new Archive(self::cast($holder ?? 'The National Archives'), null, self::string($record['reference'] ?? $record['citableReference'] ?? null) ?: null, self::PAGE.$id),
+            url: self::PAGE.$id,
             title: $title ?: null,
-            description: implode(' — ', array_filter([$record['context'] ?? null, $scope !== $title ? $scope : null, ($record['coveringDates'] ?? null) ?: null])) ?: null,
+            description: implode(' — ', array_filter([self::cast($record['context'] ?? null), $scope !== $title ? $scope : null, self::cast($record['coveringDates'] ?? null)])) ?: null,
             period: self::span($from, $to),
             raw: $record,
         );
@@ -205,6 +210,29 @@ final class NationalArchivesUk implements CivilRegistryInterface, DeclaresUsageP
             \is_bool($value) => $value ? '1' : '',
             default => throw self::malformed(),
         };
+    }
+
+    /**
+     * $value[$key][...] ?? null, as PHP reads it: an array's item, a string's
+     * character at an integer offset, null for anything else.
+     */
+    private static function at(mixed $value, string|int ...$keys): mixed
+    {
+        foreach ($keys as $key) {
+            if (\is_array($value) || (\is_string($value) && \is_int($key))) {
+                $value = $value[$key] ?? null;
+            } else {
+                return null;
+            }
+        }
+
+        return $value;
+    }
+
+    /** (string) of a scalar, as the answer's values were cast: "" for null, and for an array where PHP gave "Array". */
+    private static function cast(mixed $value): string
+    {
+        return \is_scalar($value) ? (string) $value : '';
     }
 
     /** The family's rule on a body that is not what it should be (docs/providers.md). */
