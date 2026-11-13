@@ -29,6 +29,14 @@ plain PHP, a `MockHttpClient` in a test.
 | Persons | not structured: the name is in the title or the description |
 | Access | free, no key; moderation asked: one call a second, 3,000 a day per address |
 
+## Install
+
+```sh
+composer require omnistate/national-archives-uk
+```
+
+It brings the family's core, `omnisense/omnistate`, and `omnisense/contracts` with it. No account and no key; one call a second and 3,000 a day per address, as Discovery asks ([`policy.json`](policy.json)).
+
 ## Responsibility
 
 This package is an independent, unofficial client: it is not affiliated with, endorsed by or
